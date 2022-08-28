@@ -3,10 +3,6 @@ description: Create multi-arch Proxmox packages
 inputs:
   config-file:
     required: false
-  release-id:
-    required: false
-  github-token:
-    required: false
 runs:
   using: composite
   steps:
@@ -19,19 +15,3 @@ runs:
       shell: bash
       run: |
         .ci/proxmox-make ${{ inputs.config-file }}
-    - name: Upload
-      if: inputs.release-id != '' && inputs.github-token != ''
-      uses: xresloader/upload-to-github-release@v1
-      env:
-          GITHUB_TOKEN: ${{ inputs.github-token }}
-      with:
-        release_id: ${{ inputs.release-id }}
-        file: ./output/*.deb
-        draft: false
-    - name: Rollback release
-      if: failure() && inputs.release-id != '' && inputs.github-token != ''
-      uses: author/action-rollback@stable
-      env:
-        GITHUB_TOKEN: ${{ inputs.github-token }}
-      with:
-        release_id: ${{ inputs.release-id }}
