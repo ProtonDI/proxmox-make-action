@@ -1,0 +1,60 @@
+#!/bin/bash
+
+set -e
+shopt -s nullglob
+
+LC_ALL="C"
+LANG="C"
+LANGUAGE="C"
+
+SCRIPT_DIR="$(dirname "$(realpath "$0")")"
+CONFIG_FILE="$(realpath "${1:-$PWD/pkg.conf}")"
+WORK_DIR="$(dirname "$CONFIG_FILE")"
+
+source "$CONFIG_FILE"
+
+if [[ ! -d "$WORK_DIR/.src" ]]
+then
+    mkdir -p "$WORK_DIR/.src"
+    pushd "$WORK_DIR/.src"
+    git init
+    git remote add origin "$UPSTREAM_GIT"
+    popd
+fi
+
+pushd "$WORK_DIR/.src"
+if [[ -n $(git status -s) ]]
+then
+    git reset --hard FETCH_HEAD
+    git clean -ffd
+fi
+git fetch
+git checkout FETCH_HEAD
+
+LAST_RELEASE="$(git log --pretty=oneline -n 1 --grep 'bump version to')"
+if ! egrep -q "^[0-9a-f]{40} bump version to [0-9\.\-]+$" <<< "$LAST_RELEASE"
+then
+    echo "Malformed commit message. Got '$LAST_RELEASE'." >&2
+    exit 1
+fi
+
+read COMMIT i1 i2 i3 VERSION <<< "$LAST_RELEASE"
+if [[ "$PACKAGE_VERSION" == "$VERSION" ]]
+then
+    echo "Current release is already the latest." >&2
+    exit
+fi
+
+git checkout $COMMIT
+patches=($WORK_DIR/*.patch)
+if (( ${#patches[@]} != 0))
+then
+    git am --reject --whitespace=fix "${patches[@]}"
+fi
+
+make -j $(nproc)
+popd
+
+rm -rf "$WORK_DIR/.output"
+mkdir -p "$WORK_DIR/.output"
+cp $WORK_DIR/.src/*.deb "$WORK_DIR/.output"
