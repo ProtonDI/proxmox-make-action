@@ -11,6 +11,23 @@ SCRIPT_DIR="$(dirname "$(realpath "$0")")"
 CONFIG_FILE="$(realpath "${1:-$PWD/pkg.conf}")"
 WORK_DIR="$(dirname "$CONFIG_FILE")"
 
+source /etc/os-release
+
+if [[ "${ID_LIKE:-$ID}" != "debian" ]]
+then
+    DOCKER_OPTIONS=( "run" "--rm" "-it" "--workdir" "$PWD" "--mount" "type=bind,source=$PWD,destination=$PWD")
+    if [[ "$PWD" != "$SCRIPT_DIR" ]]
+    then
+        DOCKER_OPTIONS+=( "--mount" "type=bind,source=$SCRIPT_DIR,destination=$SCRIPT_DIR" )
+    fi
+    if [[ "$PWD" != "$WORK_DIR" ]]
+    then
+        DOCKER_OPTIONS+=( "--mount" "type=bind,source=$WORK_DIR,destination=$WORK_DIR" )
+    fi
+    sudo docker build -t proxmox-make - < "$SCRIPT_DIR/Dockerfile"
+    exec sudo docker "${DOCKER_OPTIONS[@]}" proxmox-make "$0" "$@"
+fi
+
 source "$CONFIG_FILE"
 
 if [[ ! -d "$WORK_DIR/.src" ]]
