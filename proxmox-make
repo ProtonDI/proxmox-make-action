@@ -75,3 +75,4 @@ popd
 rm -rf "$WORK_DIR/.output"
 mkdir -p "$WORK_DIR/.output"
 cp $WORK_DIR/.src/*.deb "$WORK_DIR/.output"
+sed -i -E "s/^PACKAGE_VERSION=.*$/PACKAGE_VERSION=\"$VERSION\"/" "$CONFIG_FILE"
