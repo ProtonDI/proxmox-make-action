@@ -64,7 +64,7 @@ then
     git am --reject --whitespace=fix "${patches[@]}"
 fi
 
-make -j $(nproc)
+make -j $(nproc) all deb
 popd
 
 rm -rf "$WORK_DIR/.output"
