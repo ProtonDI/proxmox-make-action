@@ -24,8 +24,7 @@ then
     then
         DOCKER_OPTIONS+=( "--mount" "type=bind,source=$WORK_DIR,destination=$WORK_DIR" )
     fi
-    sudo docker build -t proxmox-make - < "$SCRIPT_DIR/Dockerfile"
-    exec sudo docker "${DOCKER_OPTIONS[@]}" proxmox-make "$0" "$@"
+    exec docker "${DOCKER_OPTIONS[@]}" ghcr.io/ProtonDI/proxmox-make "$0" "$@"
 fi
 
 source "$CONFIG_FILE"
