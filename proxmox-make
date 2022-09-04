@@ -24,7 +24,7 @@ EOF
 }
 
 ARGV=("$@")
-TEMP="$(getopt -o "hu" -l "update-config" -n "$0" -- "$@")"
+TEMP="$(getopt -o "hun" -l "help,update-config,native" -n "$0" -- "$@")"
 if (( $? != 0 ))
 then
     show_help
@@ -44,7 +44,7 @@ do
     TEMP="$1"
     shift
     case "$TEMP" in
-        -h)
+        -h|--help)
             show_help
             exit
             ;;
