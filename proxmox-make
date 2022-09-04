@@ -19,13 +19,14 @@ Usage:
 Options:
         -h                  Show this help.
         -u|--update-config  Update config file with the latest release version.
-        -n|--native         Build without docker.
+        -n|--native-build   Build without docker.
+        -l|--local-docker   Build local docker image first.
         -i|--inplace        Build without touching .src folder.
 EOF
 }
 
 ARGV=("$@")
-TEMP="$(getopt -o "huni" -l "help,update-config,native,inplace" -n "$0" -- "$@")"
+TEMP="$(getopt -o "hunil" -l "help,update-config,native-build,inplace,local-docker" -n "$0" -- "$@")"
 if (( $? != 0 ))
 then
     show_help
@@ -37,6 +38,7 @@ env_init() {
     UPDATE_CONFIG="false"
     NATIVE_BUILD="false"
     INPLACE_BUILD="false"
+    DOCKER_REGISTRY="ghcr.io/protondi/"
 }
 
 env_init
@@ -58,6 +60,9 @@ do
             ;;
         -i|--inplace)
             INPLACE_BUILD="true"
+            ;;
+        -l|--local-docker)
+            DOCKER_REGISTRY=""
             ;;
         --)
             break
@@ -84,7 +89,11 @@ then
     then
         DOCKER_OPTIONS+=( "--mount" "type=bind,source=$WORK_DIR,destination=$WORK_DIR" )
     fi
-    exec docker "${DOCKER_OPTIONS[@]}" ghcr.io/protondi/proxmox-make-action:main "$0" --native "${ARGV[@]}"
+    if [[ -z $DOCKER_REGISTRY ]]
+    then
+        docker build -t "proxmox-make-action:main" "$SCRIPT_DIR/docker"
+    fi
+    exec docker "${DOCKER_OPTIONS[@]}" ${DOCKER_REGISTRY}proxmox-make-action:main "$0" --native-build "${ARGV[@]}"
 fi
 
 source "$CONFIG_FILE"
