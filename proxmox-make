@@ -15,7 +15,7 @@ source /etc/os-release
 
 if [[ ! -f /.dockerenv ]]
 then
-    DOCKER_OPTIONS=( "run" "--rm" "-it" "--workdir" "$PWD" "--mount" "type=bind,source=$PWD,destination=$PWD")
+    DOCKER_OPTIONS=( "run" "--rm" "--workdir" "$PWD" "--mount" "type=bind,source=$PWD,destination=$PWD")
     if [[ "$PWD" != "$SCRIPT_DIR" ]]
     then
         DOCKER_OPTIONS+=( "--mount" "type=bind,source=$SCRIPT_DIR,destination=$SCRIPT_DIR" )
