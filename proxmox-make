@@ -7,8 +7,21 @@ LC_ALL="C"
 LANG="C"
 LANGUAGE="C"
 
+show_help() {
+    cat << EOF
+Usage:
+        $(basename "$0") [-h] [-u|--update-config] <config file>
+
+        Build
+
+Options:
+        -h                  Show this help.
+        -u|--update-config  Update config file with the latest release version.
+EOF
+}
+
 ARGV=("$@")
-TEMP="$(getopt -l "update-config" -n "$0" -- "$@")"
+TEMP="$(getopt -o "hu" -l "update-config" -n "$0" -- "$@")"
 if (( $? != 0 ))
 then
     show_help
@@ -27,7 +40,11 @@ do
     TEMP="$1"
     shift
     case "$TEMP" in
-        --update-config)
+        -h)
+            show_help
+            exit
+            ;;
+        -u|--update-config)
             UPDATE_CONFIG="true"
             ;;
         --)
