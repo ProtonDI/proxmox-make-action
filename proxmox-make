@@ -31,11 +31,7 @@ source "$CONFIG_FILE"
 
 if [[ ! -d "$WORK_DIR/.src" ]]
 then
-    mkdir -p "$WORK_DIR/.src"
-    pushd "$WORK_DIR/.src"
-    git init
-    git remote add origin "$UPSTREAM_GIT"
-    popd
+    git clone "$UPSTREAM_GIT" .src
 fi
 
 pushd "$WORK_DIR/.src"
