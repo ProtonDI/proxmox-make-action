@@ -48,7 +48,7 @@ git fetch
 git checkout FETCH_HEAD
 
 LAST_RELEASE="$(git log --pretty=oneline -n 1 --grep 'bump version to')"
-if ! egrep -q "^[0-9a-f]{40} bump version to [0-9\.\-]+$" <<< "$LAST_RELEASE"
+if ! egrep -q "^[0-9a-f]{40} bump version to .+$" <<< "$LAST_RELEASE"
 then
     echo "Malformed commit message. Got '$LAST_RELEASE'." >&2
     exit 1
