@@ -10,13 +10,16 @@ LANGUAGE="C"
 show_help() {
     cat << EOF
 Usage:
-        $(basename "$0") [-h] [-u|--update-config] <config file>
+        $(basename "$0") [-h] [-u|--update-config] [-n|--native] <config file>
 
-        Build
+        Build proxmox package.
+        
+        If <config file> is not supplied, will use pkg.conf from current folder.
 
 Options:
         -h                  Show this help.
         -u|--update-config  Update config file with the latest release version.
+        -n|--native         Build without docker.
 EOF
 }
 
@@ -31,6 +34,7 @@ eval set -- "$TEMP"
 
 env_init() {
     UPDATE_CONFIG="false"
+    NATIVE_BUILD="false"
 }
 
 env_init
@@ -46,6 +50,9 @@ do
             ;;
         -u|--update-config)
             UPDATE_CONFIG="true"
+            ;;
+        -n|--native)
+            NATIVE_BUILD="true"
             ;;
         --)
             break
@@ -63,7 +70,7 @@ WORK_DIR="$(dirname "$CONFIG_FILE")"
 
 source /etc/os-release
 
-if [[ ! -f /.dockerenv ]]
+if ! $NATIVE_BUILD
 then
     DOCKER_OPTIONS=( "run" "--rm" "--user" "$(id -u)" "--workdir" "$PWD" "--mount" "type=bind,source=$PWD,destination=$PWD")
     if [[ "$PWD" != "$SCRIPT_DIR" ]]
@@ -78,6 +85,7 @@ then
     then
         DOCKER_OPTIONS+=( "--mount" "type=bind,source=$HOME,destination=$HOME" )
     fi
+    exec docker "${DOCKER_OPTIONS[@]}" ghcr.io/protondi/proxmox-make-action:main "$0" --native "${ARGV[@]}"
 fi
 
 source "$CONFIG_FILE"
