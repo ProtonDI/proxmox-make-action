@@ -7,6 +7,39 @@ LC_ALL="C"
 LANG="C"
 LANGUAGE="C"
 
+ARGV=("$@")
+TEMP="$(getopt -l "update-config" -n "$0" -- "$@")"
+if (( $? != 0 ))
+then
+    show_help
+    exit
+fi
+eval set -- "$TEMP"
+
+env_init() {
+    UPDATE_CONFIG="false"
+}
+
+env_init
+
+while true
+do
+    TEMP="$1"
+    shift
+    case "$TEMP" in
+        --update-config)
+            UPDATE_CONFIG="true"
+            ;;
+        --)
+            break
+            ;;
+        *)
+            echo "Internal error!" >&2
+            exit 1
+            ;;
+    esac
+done
+
 SCRIPT_DIR="$(dirname "$(realpath "$0")")"
 CONFIG_FILE="$(realpath "${1:-$PWD/pkg.conf}")"
 WORK_DIR="$(dirname "$CONFIG_FILE")"
@@ -24,7 +57,7 @@ then
     then
         DOCKER_OPTIONS+=( "--mount" "type=bind,source=$WORK_DIR,destination=$WORK_DIR" )
     fi
-    exec docker "${DOCKER_OPTIONS[@]}" ghcr.io/protondi/proxmox-make-action:main "$0" "$@"
+    exec docker "${DOCKER_OPTIONS[@]}" ghcr.io/protondi/proxmox-make-action:main "$0" "${ARGV[@]}"
 fi
 
 source "$CONFIG_FILE"
@@ -70,4 +103,8 @@ popd
 rm -rf "$WORK_DIR/.output"
 mkdir -p "$WORK_DIR/.output"
 cp $WORK_DIR/.src/*.deb "$WORK_DIR/.output"
-sed -i -E "s/^PACKAGE_VERSION=.*$/PACKAGE_VERSION=\"$VERSION\"/" "$CONFIG_FILE"
+
+if $UPDATE_CONFIG
+then
+    sed -i -E "s/^PACKAGE_VERSION=.*$/PACKAGE_VERSION=\"$VERSION\"/" "$CONFIG_FILE"
+fi
