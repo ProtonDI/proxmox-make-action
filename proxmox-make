@@ -15,7 +15,7 @@ source /etc/os-release
 
 if [[ ! -f /.dockerenv ]]
 then
-    DOCKER_OPTIONS=( "run" "--rm" "--workdir" "$PWD" "--mount" "type=bind,source=$PWD,destination=$PWD")
+    DOCKER_OPTIONS=( "run" "--rm" "--user" "$(id -u)" "--workdir" "$PWD" "--mount" "type=bind,source=$PWD,destination=$PWD")
     if [[ "$PWD" != "$SCRIPT_DIR" ]]
     then
         DOCKER_OPTIONS+=( "--mount" "type=bind,source=$SCRIPT_DIR,destination=$SCRIPT_DIR" )
@@ -31,7 +31,7 @@ source "$CONFIG_FILE"
 
 if [[ ! -d "$WORK_DIR/.src" ]]
 then
-    git clone "$UPSTREAM_GIT" .src
+    git clone "$UPSTREAM_GIT" "$WORK_DIR/.src"
 fi
 
 pushd "$WORK_DIR/.src"
