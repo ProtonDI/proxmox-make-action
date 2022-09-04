@@ -74,7 +74,10 @@ then
     then
         DOCKER_OPTIONS+=( "--mount" "type=bind,source=$WORK_DIR,destination=$WORK_DIR" )
     fi
-    exec docker "${DOCKER_OPTIONS[@]}" ghcr.io/protondi/proxmox-make-action:main "$0" "${ARGV[@]}"
+    if [[ "$PWD" != "$HOME" ]]
+    then
+        DOCKER_OPTIONS+=( "--mount" "type=bind,source=$HOME,destination=$HOME" )
+    fi
 fi
 
 source "$CONFIG_FILE"
