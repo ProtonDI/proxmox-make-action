@@ -131,7 +131,7 @@ else
     fi
 fi
 
-make -j $(nproc) all deb
+make all deb
 popd
 
 rm -rf "$WORK_DIR/.output"
