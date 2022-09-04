@@ -37,11 +37,11 @@ fi
 pushd "$WORK_DIR/.src"
 if [[ -n $(git status -s) ]]
 then
-    git reset --hard FETCH_HEAD
+    git reset --hard HEAD
     git clean -ffd
 fi
 git fetch
-git checkout FETCH_HEAD
+git checkout HEAD
 
 LAST_RELEASE="$(git log --pretty=oneline -n 1 --grep 'bump version to')"
 if ! egrep -q "^[0-9a-f]{40} bump version to .+$" <<< "$LAST_RELEASE"
