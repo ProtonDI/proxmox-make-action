@@ -10,7 +10,7 @@ LANGUAGE="C"
 show_help() {
     cat << EOF
 Usage:
-        $(basename "$0") [-h] [-u|--update-config] [-n|--native] <config file>
+        $(basename "$0") [-o|--options] <config file>
 
         Build proxmox package.
         
@@ -20,11 +20,12 @@ Options:
         -h                  Show this help.
         -u|--update-config  Update config file with the latest release version.
         -n|--native         Build without docker.
+        -i|--inplace        Build without touching .src folder.
 EOF
 }
 
 ARGV=("$@")
-TEMP="$(getopt -o "hun" -l "help,update-config,native" -n "$0" -- "$@")"
+TEMP="$(getopt -o "huni" -l "help,update-config,native,inplace" -n "$0" -- "$@")"
 if (( $? != 0 ))
 then
     show_help
@@ -35,6 +36,7 @@ eval set -- "$TEMP"
 env_init() {
     UPDATE_CONFIG="false"
     NATIVE_BUILD="false"
+    INPLACE_BUILD="false"
 }
 
 env_init
@@ -53,6 +55,9 @@ do
             ;;
         -n|--native)
             NATIVE_BUILD="true"
+            ;;
+        -i|--inplace)
+            INPLACE_BUILD="true"
             ;;
         --)
             break
@@ -84,41 +89,46 @@ fi
 
 source "$CONFIG_FILE"
 
-if [[ ! -d "$WORK_DIR/.src" ]]
+if $INPLACE_BUILD
 then
-    git clone "$UPSTREAM_GIT" "$WORK_DIR/.src"
-fi
+    pushd "$WORK_DIR/.src"
+else
+    if [[ ! -d "$WORK_DIR/.src" ]]
+    then
+        git clone "$UPSTREAM_GIT" "$WORK_DIR/.src"
+    fi
 
-pushd "$WORK_DIR/.src"
-if [[ -n $(git status -s) ]]
-then
-    git reset --hard HEAD
-    git clean -ffd
-fi
-git fetch
-git checkout HEAD
+    pushd "$WORK_DIR/.src"
+    if [[ -n $(git status -s) ]]
+    then
+        git reset --hard HEAD
+        git clean -ffd
+    fi
+    git fetch
+    git checkout HEAD
 
-LAST_RELEASE="$(git log --pretty=oneline -n 1 --grep 'bump version to')"
-if ! egrep -q "^[0-9a-f]{40} bump version to .+$" <<< "$LAST_RELEASE"
-then
-    echo "Malformed commit message. Got '$LAST_RELEASE'." >&2
-    exit 1
-fi
+    LAST_RELEASE="$(git log --pretty=oneline -n 1 --grep 'bump version to')"
+    if ! egrep -q "^[0-9a-f]{40} bump version to .+$" <<< "$LAST_RELEASE"
+    then
+        echo "Malformed commit message. Got '$LAST_RELEASE'." >&2
+        exit 1
+    fi
 
-read COMMIT i1 i2 i3 VERSION <<< "$LAST_RELEASE"
-if [[ "$PACKAGE_VERSION" == "$VERSION" ]]
-then
-    echo "Current release is already the latest." >&2
-    exit
-fi
+    read COMMIT i1 i2 i3 VERSION <<< "$LAST_RELEASE"
+    if [[ "$PACKAGE_VERSION" == "$VERSION" ]]
+    then
+        echo "Current release is already the latest." >&2
+        exit
+    fi
 
-git checkout $COMMIT
-patches=($WORK_DIR/*.patch)
-if (( ${#patches[@]} != 0))
-then
-    git config user.name 'github-actions[bot]'
-    git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-    git am --reject --whitespace=fix "${patches[@]}"
+    git checkout $COMMIT
+    patches=($WORK_DIR/*.patch)
+    if (( ${#patches[@]} != 0))
+    then
+        git config user.name 'github-actions[bot]'
+        git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+        git am --reject --whitespace=fix "${patches[@]}"
+    fi
 fi
 
 make -j $(nproc) all deb
