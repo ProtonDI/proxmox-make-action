@@ -6,12 +6,13 @@ RUN dpkg --add-architecture arm64 && \
     apt-get update && \
     apt-get install --no-install-recommends -y \
         apt-transport-https ca-certificates wget \
-        apt-utils git debhelper lintian rsync fakeroot \
-        build-essential crossbuild-essential-arm64 gcc-riscv64-linux-gnu g++-riscv64-linux-gnu
+        apt-utils git rsync fakeroot sudo \
+        build-essential crossbuild-essential-arm64 gcc-riscv64-linux-gnu g++-riscv64-linux-gnu && \
+    echo "deb http://download.proxmox.com/debian/pve bullseye pve-no-subscription" > /etc/apt/sources.list.d/pve-no-subscription-repo.list && \
+    echo "deb http://download.proxmox.com/debian/devel bullseye main" > /etc/apt/sources.list.d/pve-devel-repo.list && \
+    wget http://download.proxmox.com/debian/proxmox-release-bullseye.gpg -O /etc/apt/trusted.gpg.d/proxmox-release-bullseye.gpg && \
+    adduser --gecos runner --disabled-password runner && \
+    echo "runner ALL=(ALL:ALL) NOPASSWD: ALL" >> /etc/sudoers && \
+    rm -rf /var/lib/apt/lists/*
 
-# Install proxmox dependencies
-RUN echo "deb [arch=amd64] http://download.proxmox.com/debian/pve bullseye pve-no-subscription" > /etc/apt/sources.list.d/pve-install-repo.list && \
-    wget https://enterprise.proxmox.com/debian/proxmox-release-bullseye.gpg -O /etc/apt/trusted.gpg.d/proxmox-release-bullseye.gpg && \
-    apt-get update && \
-    apt-get install --no-install-recommends -y \
-        pve-doc-generator
+USER runner
