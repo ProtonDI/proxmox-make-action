@@ -92,6 +92,8 @@ then
     if [[ -z $DOCKER_REGISTRY ]]
     then
         docker build -t "proxmox-make-action:main" "$SCRIPT_DIR/docker"
+    else
+        docker pull ${DOCKER_REGISTRY}proxmox-make-action:main
     fi
     exec docker "${DOCKER_OPTIONS[@]}" ${DOCKER_REGISTRY}proxmox-make-action:main "$0" --native-build "${ARGV[@]}"
 fi
