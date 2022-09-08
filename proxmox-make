@@ -55,7 +55,7 @@ do
         -u|--update-config)
             UPDATE_CONFIG="true"
             ;;
-        -n|--native)
+        -n|--native-build)
             NATIVE_BUILD="true"
             ;;
         -i|--inplace)
@@ -68,7 +68,7 @@ do
             break
             ;;
         *)
-            echo "Internal error!" >&2
+            echo "Unrecognized option '$TEMP'." >&2
             exit 1
             ;;
     esac
