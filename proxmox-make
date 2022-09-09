@@ -143,7 +143,14 @@ else
 fi
 
 sudo apt-get update
-sudo apt-get build-dep --no-install-recommends -y .
+if [[ -f "./debian/control.in" ]]
+then
+    make all deb || true
+    sudo apt-get build-dep --no-install-recommends -y ./build
+    make distclean
+else
+    sudo apt-get build-dep --no-install-recommends -y .
+fi
 make all deb
 popd
 
