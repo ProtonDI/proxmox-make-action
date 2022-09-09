@@ -80,7 +80,29 @@ WORK_DIR="$(dirname "$CONFIG_FILE")"
 
 if ! $NATIVE_BUILD
 then
-    DOCKER_OPTIONS=( "run" "--rm" "--user" "$(id -u)" "--workdir" "$PWD" "--mount" "type=bind,source=$PWD,destination=$PWD")
+    DOCKER_IMAGE="$(docker image ls -qf=reference=${DOCKER_REGISTRY}proxmox-make-action:main)"
+
+    if [[ -z $DOCKER_REGISTRY ]]
+    then
+        docker build -t "${DOCKER_REGISTRY}proxmox-make-action:main" "$SCRIPT_DIR/docker"
+    else
+        docker pull ${DOCKER_REGISTRY}proxmox-make-action:main
+    fi
+
+    if [[ $DOCKER_IMAGE != "$(docker image ls -qf=reference=${DOCKER_REGISTRY}proxmox-make-action:main)" ]]
+    then
+        docker image rm ${DOCKER_REGISTRY}proxmox-make-action:builder || true
+    fi
+
+    DOCKER_BUILDER="$(docker image ls -qf=reference=${DOCKER_REGISTRY}proxmox-make-action:builder)"
+    if [[ -z $DOCKER_BUILDER ]]
+    then
+        docker tag ${DOCKER_REGISTRY}proxmox-make-action:main ${DOCKER_REGISTRY}proxmox-make-action:builder
+    fi
+
+    DOCKER_OPTIONS=( "--name" "proxmox-make" )
+    DOCKER_OPTIONS+=( "--workdir" "$PWD" )
+    DOCKER_OPTIONS+=( "--mount" "type=bind,source=$PWD,destination=$PWD" )
     if [[ "$PWD" != "$SCRIPT_DIR" ]]
     then
         DOCKER_OPTIONS+=( "--mount" "type=bind,source=$SCRIPT_DIR,destination=$SCRIPT_DIR" )
@@ -89,13 +111,10 @@ then
     then
         DOCKER_OPTIONS+=( "--mount" "type=bind,source=$WORK_DIR,destination=$WORK_DIR" )
     fi
-    if [[ -z $DOCKER_REGISTRY ]]
-    then
-        docker build -t "proxmox-make-action:main" "$SCRIPT_DIR/docker"
-    else
-        docker pull ${DOCKER_REGISTRY}proxmox-make-action:main
-    fi
-    exec docker "${DOCKER_OPTIONS[@]}" ${DOCKER_REGISTRY}proxmox-make-action:main "$0" --native-build "${ARGV[@]}"
+    docker run "${DOCKER_OPTIONS[@]}" ${DOCKER_REGISTRY}proxmox-make-action:builder bash -c "sed -i -E \"s/^(runner):(x?):([0-9]+):([0-9]+):(.*):(.*):(.*)$/\1:\2:$(id -u):$(id -g):\5:\6:\7/\" /etc/passwd && sudo -u runner \"$0\" --native-build ${ARGV[*]}"
+    docker commit proxmox-make ${DOCKER_REGISTRY}proxmox-make-action:builder
+    docker container rm proxmox-make
+    exit
 fi
 
 source "$CONFIG_FILE"
@@ -143,6 +162,7 @@ else
 fi
 
 sudo apt-get update
+sudo apt full-upgrade --no-install-recommends -y
 if [[ -f "./debian/control.in" ]]
 then
     make all deb || true
@@ -151,6 +171,7 @@ then
 else
     sudo apt-get build-dep --no-install-recommends -y .
 fi
+sudo rm -rf /var/lib/apt/lists/*
 make all deb
 popd
 

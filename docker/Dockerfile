@@ -14,5 +14,3 @@ RUN dpkg --add-architecture arm64 && \
     adduser --gecos runner --disabled-password runner && \
     echo "runner ALL=(ALL:ALL) NOPASSWD: ALL" >> /etc/sudoers && \
     rm -rf /var/lib/apt/lists/*
-
-USER runner
