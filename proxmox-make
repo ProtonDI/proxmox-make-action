@@ -111,6 +111,7 @@ then
     then
         DOCKER_OPTIONS+=( "--mount" "type=bind,source=$WORK_DIR,destination=$WORK_DIR" )
     fi
+    docker container rm proxmox-make || true
     docker run "${DOCKER_OPTIONS[@]}" ${DOCKER_REGISTRY}proxmox-make-action:builder bash -c "sed -i -E \"s/^(runner):(x?):([0-9]+):([0-9]+):(.*):(.*):(.*)$/\1:\2:$(id -u):$(id -g):\5:\6:\7/\" /etc/passwd && sudo -u runner \"$0\" --native-build ${ARGV[*]}"
     docker commit proxmox-make ${DOCKER_REGISTRY}proxmox-make-action:builder
     docker container rm proxmox-make
