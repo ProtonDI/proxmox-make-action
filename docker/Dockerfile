@@ -4,6 +4,7 @@ FROM debian:bullseye
 RUN dpkg --add-architecture arm64 && \
     dpkg --add-architecture riscv64 && \
     apt-get update && \
+    apt-get full-upgrade -y && \
     apt-get install --no-install-recommends -y \
         apt-transport-https ca-certificates wget debian-ports-archive-keyring \
         apt-utils git rsync fakeroot sudo \
