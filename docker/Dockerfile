@@ -1,4 +1,4 @@
-FROM debian
+FROM debian:bullseye
 
 # Install build dependencies
 RUN dpkg --add-architecture arm64 && \
