@@ -126,7 +126,7 @@ then
 else
     if [[ ! -d "$WORK_DIR/.src" ]]
     then
-        git clone "$UPSTREAM_GIT" "$WORK_DIR/.src"
+        git clone --recurse-submodules -j$(nproc) "$UPSTREAM_GIT" "$WORK_DIR/.src"
     fi
 
     pushd "$WORK_DIR/.src"
