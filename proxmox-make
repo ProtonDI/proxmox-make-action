@@ -84,7 +84,7 @@ then
 
     if [[ -z $DOCKER_REGISTRY ]]
     then
-        docker build -t "${DOCKER_REGISTRY}proxmox-make-action:main" "$SCRIPT_DIR/docker"
+        docker build --force-rm -t "${DOCKER_REGISTRY}proxmox-make-action:main" "$SCRIPT_DIR/docker"
     else
         docker pull ${DOCKER_REGISTRY}proxmox-make-action:main
     fi
