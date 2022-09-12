@@ -10,11 +10,11 @@ LANGUAGE="C"
 show_help() {
     cat << EOF
 Usage:
-        $(basename "$0") [-o|--options] <config file>
+        $(basename "$0") [-o|--options] <source dir>
 
         Build proxmox package.
         
-        If <config file> is not supplied, will use pkg.conf from current folder.
+        If <source dir> is not supplied, the current folder will be used.
 
 Options:
         -h                  Show this help.
@@ -75,8 +75,7 @@ do
 done
 
 SCRIPT_DIR="$(dirname "$(realpath "$0")")"
-CONFIG_FILE="$(realpath "${1:-$PWD/pkg.conf}")"
-WORK_DIR="$(dirname "$CONFIG_FILE")"
+WORK_DIR="$(realpath "${1:-$PWD}")"
 
 if ! $NATIVE_BUILD
 then
@@ -117,8 +116,6 @@ then
     docker container rm proxmox-make-action
     exit
 fi
-
-source "$CONFIG_FILE"
 
 if $INPLACE_BUILD
 then
@@ -205,8 +202,3 @@ pushd "$WORK_DIR/.src"
 git checkout $COMMIT
 
 popd
-
-if $UPDATE_CONFIG
-then
-    sed -i -E "s/^PACKAGE_VERSION=.*$/PACKAGE_VERSION=\"$VERSION\"/" "$CONFIG_FILE"
-fi
