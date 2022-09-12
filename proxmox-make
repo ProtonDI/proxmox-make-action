@@ -124,19 +124,35 @@ if $INPLACE_BUILD
 then
     pushd "$WORK_DIR/.src"
 else
-    if [[ ! -d "$WORK_DIR/.src" ]]
+    pushd "$WORK_DIR"
+
+    if ! git remote | grep -q "upstream"
     then
-        git clone --recurse-submodules -j$(nproc) "$UPSTREAM_GIT" "$WORK_DIR/.src"
+        git remote add upstream "$UPSTREAM_GIT"
     fi
 
+    git fetch upstream
+
+    git switch -C upstream upstream/master
+    #git push -u origin
+    git switch main
+
+    if [[ ! -d "$WORK_DIR/.src" ]]
+    then
+        #git submodule add -f -b upstream "$(git remote get-url origin)" .src
+        git submodule add -f $UPSTREAM_GIT .src
+    fi
+
+    popd
     pushd "$WORK_DIR/.src"
+
     if [[ -n $(git status -s) ]]
     then
-        git reset --hard HEAD
+        git reset --hard origin/HEAD
         git clean -ffd
     fi
     git fetch
-    git checkout HEAD
+    git checkout origin/HEAD
 
     LAST_RELEASE="$(git log --pretty=oneline -n 1 --grep 'bump version to')"
     if ! egrep -q "^[0-9a-f]{40} bump version to .+$" <<< "$LAST_RELEASE"
@@ -174,11 +190,18 @@ else
 fi
 sudo rm -rf /var/lib/apt/lists/*
 make all deb
+
 popd
 
 rm -rf "$WORK_DIR/.output"
 mkdir -p "$WORK_DIR/.output"
 cp $WORK_DIR/.src/*.deb "$WORK_DIR/.output"
+
+pushd "$WORK_DIR/.src"
+
+git checkout $COMMIT
+
+popd
 
 if $UPDATE_CONFIG
 then
