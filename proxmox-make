@@ -128,7 +128,7 @@ else
 
     if ! git remote | grep -q "upstream"
     then
-        git remote add upstream "$UPSTREAM_GIT"
+        git remote add upstream "git://git.proxmox.com/git/$(basename "$(git remote get-url origin)")"
     fi
 
     git fetch upstream
@@ -140,7 +140,7 @@ else
     if [[ ! -d "$WORK_DIR/.src" ]]
     then
         #git submodule add -f -b upstream "$(git remote get-url origin)" .src
-        git submodule add -f $UPSTREAM_GIT .src
+        git submodule add -f "git://git.proxmox.com/git/$(basename "$(git remote get-url origin)")" .src
     fi
 
     popd
