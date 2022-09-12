@@ -147,11 +147,11 @@ else
 
     if [[ -n $(git status -s) ]]
     then
-        git reset --hard origin/HEAD
+        git reset --hard origin/upstream
         git clean -ffd
     fi
     git fetch
-    git checkout origin/HEAD
+    git checkout origin/upstream
 
     LAST_RELEASE="$(git log --pretty=oneline -n 1 --grep 'bump version to')"
     if ! egrep -q "^[0-9a-f]{40} bump version to .+$" <<< "$LAST_RELEASE"
