@@ -137,9 +137,9 @@ else
     if [[ ! -d "$WORK_DIR/.src" ]]
     then
         git submodule add -f -b upstream "$(git remote get-url origin)" .src
-        PACKAGE_VERSION=""
+        PACKAGE_COMMIT=""
     else
-        PACKAGE_VERSION="$(git submodule status .src | awk '{print $1}')"
+        PACKAGE_COMMIT="$(git submodule status .src | awk '{print $1}')"
     fi
 
     popd
@@ -161,7 +161,7 @@ else
     fi
 
     read COMMIT i1 i2 i3 VERSION <<< "$LAST_RELEASE"
-    if [[ "$PACKAGE_VERSION" == "$COMMIT" ]]
+    if [[ "$PACKAGE_COMMIT" == "$COMMIT" ]]
     then
         echo "Current release is already the latest." >&2
         exit
