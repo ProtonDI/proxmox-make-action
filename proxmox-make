@@ -27,6 +27,7 @@ Usage:
 
 Options:
         -h                      Show this help.
+        -d|--distclean          Distclean before make.
         -u|--update-config      Update config file with the latest release version.
         -n|--native-build       Build without docker.
         -l|--local-docker       Build local docker image first.
@@ -40,7 +41,7 @@ EOF
 }
 
 ARGV=("$@")
-if ! TEMP="$(getopt -o "hunilfvb:o" -l "help,update-config,native-build,inplace,local-docker,force,verbose,backend:,offline" -n "$0" -- "$@")"
+if ! TEMP="$(getopt -o "hdunilfvb:o" -l "help,distclean,update-config,native-build,inplace,local-docker,force,verbose,backend:,offline" -n "$0" -- "$@")"
 then
     show_help
     exit
@@ -49,6 +50,7 @@ eval set -- "$TEMP"
 
 env_init() {
     UPDATE_CONFIG="false"
+    EXTRA_MAKE_TARGET=""
     NATIVE_BUILD="false"
     INPLACE_BUILD="false"
     DOCKER_REGISTRY="ghcr.io/protondi/"
@@ -71,6 +73,9 @@ do
             ;;
         -u|--update-config)
             UPDATE_CONFIG="true"
+            ;;
+        -d|--distclean)
+            EXTRA_MAKE_TARGET="distclean"
             ;;
         -n|--native-build)
             NATIVE_BUILD="true"
@@ -295,7 +300,8 @@ fi
 
 echo "Building start!
 ====================="
-make all deb
+sudo rm -rf /var/lib/apt/lists/*
+make ${EXTRA_MAKE_TARGET:-"$EXTRA_MAKE_TARGET"} all deb
 
 popd &>/dev/null
 
