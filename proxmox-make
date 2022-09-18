@@ -152,8 +152,12 @@ else
     fi
     git fetch
     git checkout origin/upstream
-
     LAST_RELEASE="$(git log --pretty=oneline -n 1 --grep 'bump version to')"
+    if [[ -n "$PACKAGE_COMMIT" ]]
+    then
+        git checkout "$PACKAGE_COMMIT"
+    fi
+
     if ! egrep -q "^[0-9a-f]{40} bump version to .+$" <<< "$LAST_RELEASE"
     then
         echo "Malformed commit message. Got '$LAST_RELEASE'." >&2
@@ -161,13 +165,14 @@ else
     fi
 
     read COMMIT i1 i2 i3 VERSION <<< "$LAST_RELEASE"
+    
     if [[ "$PACKAGE_COMMIT" == "$COMMIT" ]]
     then
         echo "Current release is already the latest." >&2
         exit
     fi
-
-    git checkout $COMMIT
+    
+    git checkout "$COMMIT"
     patches=($WORK_DIR/*.patch)
     if (( ${#patches[@]} != 0))
     then
