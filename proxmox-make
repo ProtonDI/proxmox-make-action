@@ -26,8 +26,7 @@ EOF
 }
 
 ARGV=("$@")
-TEMP="$(getopt -o "hunil" -l "help,update-config,native-build,inplace,local-docker" -n "$0" -- "$@")"
-if (( $? != 0 ))
+if ! TEMP="$(getopt -o "hunil" -l "help,update-config,native-build,inplace,local-docker" -n "$0" -- "$@")"
 then
     show_help
     exit
@@ -79,24 +78,24 @@ WORK_DIR="$(realpath "${1:-$PWD}")"
 
 if ! $NATIVE_BUILD
 then
-    DOCKER_IMAGE="$(docker image ls -qf=reference=${DOCKER_REGISTRY}proxmox-make-action:main)"
+    DOCKER_IMAGE="$(docker image ls "-qf=reference=${DOCKER_REGISTRY}proxmox-make-action:main")"
 
     if [[ -z $DOCKER_REGISTRY ]]
     then
         docker build --force-rm -t "${DOCKER_REGISTRY}proxmox-make-action:main" "$SCRIPT_DIR/docker"
     else
-        docker pull ${DOCKER_REGISTRY}proxmox-make-action:main
+        docker pull "${DOCKER_REGISTRY}proxmox-make-action:main"
     fi
 
-    if [[ $DOCKER_IMAGE != "$(docker image ls -qf=reference=${DOCKER_REGISTRY}proxmox-make-action:main)" ]]
+    if [[ $DOCKER_IMAGE != "$(docker image ls "-qf=reference=${DOCKER_REGISTRY}proxmox-make-action:main")" ]]
     then
-        docker image rm ${DOCKER_REGISTRY}proxmox-make-action:builder &>/dev/null || true
+        docker image rm "${DOCKER_REGISTRY}proxmox-make-action:builder" &>/dev/null || true
     fi
 
-    DOCKER_BUILDER="$(docker image ls -qf=reference=${DOCKER_REGISTRY}proxmox-make-action:builder)"
+    DOCKER_BUILDER="$(docker image ls "-qf=reference=${DOCKER_REGISTRY}proxmox-make-action:builder")"
     if [[ -z $DOCKER_BUILDER ]]
     then
-        docker tag ${DOCKER_REGISTRY}proxmox-make-action:main ${DOCKER_REGISTRY}proxmox-make-action:builder
+        docker tag "${DOCKER_REGISTRY}proxmox-make-action:main" "${DOCKER_REGISTRY}proxmox-make-action:builder"
     fi
 
     DOCKER_OPTIONS=( "--name" "proxmox-make-action" )
@@ -111,8 +110,8 @@ then
         DOCKER_OPTIONS+=( "--mount" "type=bind,source=$WORK_DIR,destination=$WORK_DIR" )
     fi
     docker container rm proxmox-make-action &>/dev/null || true
-    docker run "${DOCKER_OPTIONS[@]}" ${DOCKER_REGISTRY}proxmox-make-action:builder bash -c "sed -i -E \"s/^(runner):(x?):([0-9]+):([0-9]+):(.*):(.*):(.*)$/\1:\2:$(id -u):$(id -g):\5:\6:\7/\" /etc/passwd && sudo -u runner \"$0\" --native-build ${ARGV[*]}"
-    docker commit proxmox-make-action ${DOCKER_REGISTRY}proxmox-make-action:builder
+    docker run "${DOCKER_OPTIONS[@]}" "${DOCKER_REGISTRY}proxmox-make-action:builder" bash -c "sed -i -E \"s/^(runner):(x?):([0-9]+):([0-9]+):(.*):(.*):(.*)$/\1:\2:$(id -u):$(id -g):\5:\6:\7/\" /etc/passwd && sudo -u runner \"$0\" --native-build ${ARGV[*]}"
+    docker commit proxmox-make-action "${DOCKER_REGISTRY}proxmox-make-action:builder"
     docker container rm proxmox-make-action
     exit
 fi
@@ -158,13 +157,13 @@ else
         git checkout "$PACKAGE_COMMIT"
     fi
 
-    if ! egrep -q "^[0-9a-f]{40} bump version to .+$" <<< "$LAST_RELEASE"
+    if ! grep -Eq "^[0-9a-f]{40} bump version to .+$" <<< "$LAST_RELEASE"
     then
         echo "Malformed commit message. Got '$LAST_RELEASE'." >&2
         exit 1
     fi
 
-    read COMMIT i1 i2 i3 VERSION <<< "$LAST_RELEASE"
+    read -r COMMIT i1 i2 i3 VERSION <<< "$LAST_RELEASE"
     
     if [[ "$PACKAGE_COMMIT" == "$COMMIT" ]]
     then
@@ -173,7 +172,7 @@ else
     fi
     
     git checkout "$COMMIT"
-    patches=($WORK_DIR/*.patch)
+    patches=("$WORK_DIR"/*.patch)
     if (( ${#patches[@]} != 0))
     then
         if [[ -z $(git config user.name) ]]
@@ -202,10 +201,10 @@ popd
 
 rm -rf "$WORK_DIR/.output"
 mkdir -p "$WORK_DIR/.output"
-cp $WORK_DIR/.src/*.deb "$WORK_DIR/.output"
+cp "$WORK_DIR"/.src/*.deb "$WORK_DIR/.output"
 
 pushd "$WORK_DIR/.src"
 
-git checkout $COMMIT
+git checkout "$COMMIT"
 
 popd
