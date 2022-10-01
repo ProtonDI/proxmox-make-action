@@ -7,6 +7,15 @@ LC_ALL="C"
 LANG="C"
 LANGUAGE="C"
 
+verbose() {
+    if $VERBOSE
+    then
+        cat
+    else
+        cat >/dev/null
+    fi
+}
+
 show_help() {
     cat << EOF
 Usage:
@@ -23,11 +32,12 @@ Options:
         -l|--local-docker   Build local docker image first.
         -i|--inplace        Build without touching .src folder.
         -f|--force          Force rebuild the latest version.
+        -v|--verbose        Increase output level.
 EOF
 }
 
 ARGV=("$@")
-if ! TEMP="$(getopt -o "hunilf" -l "help,update-config,native-build,inplace,local-docker,force" -n "$0" -- "$@")"
+if ! TEMP="$(getopt -o "hunilfv" -l "help,update-config,native-build,inplace,local-docker,force,verbose" -n "$0" -- "$@")"
 then
     show_help
     exit
@@ -40,6 +50,7 @@ env_init() {
     INPLACE_BUILD="false"
     DOCKER_REGISTRY="ghcr.io/protondi/"
     FORCE_BUILD="false"
+    VERBOSE="false"
 }
 
 env_init
@@ -67,6 +78,9 @@ do
             ;;
         -f|--force)
             FORCE_BUILD="true"
+            ;;
+        -v|--verbose)
+            VERBOSE="true"
             ;;
         --)
             break
