@@ -35,11 +35,12 @@ Options:
         -v|--verbose            Increase output level.
         -b|--backend <backend>  Manually specify container backend. supported values are:
                                 docker, podman
+        -o|--offline            Build without network operation. Implies --inplace.
 EOF
 }
 
 ARGV=("$@")
-if ! TEMP="$(getopt -o "hunilfvb:" -l "help,update-config,native-build,inplace,local-docker,force,verbose,backend:" -n "$0" -- "$@")"
+if ! TEMP="$(getopt -o "hunilfvb:o" -l "help,update-config,native-build,inplace,local-docker,force,verbose,backend:,offline" -n "$0" -- "$@")"
 then
     show_help
     exit
@@ -54,6 +55,7 @@ env_init() {
     FORCE_BUILD="false"
     CONTAINER_BACKEND="docker"
     VERBOSE="false"
+    OFFLINE_BUILD="false"
 }
 
 env_init
@@ -89,6 +91,10 @@ do
             CONTAINER_BACKEND="$1"
             shift
             ;;
+        -o|--offline)
+            OFFLINE_BUILD="true"
+            INPLACE_BUILD="true"
+            ;;
         --)
             break
             ;;
@@ -106,6 +112,7 @@ if ! $NATIVE_BUILD
 then
     if [[ "$(basename "$CONTAINER_BACKEND")" == "docker" ]] && "$CONTAINER_BACKEND" -v | grep -q podman
     then
+        echo "'$CONTAINER_BACKEND' backend is selected, but the functionality is actually provided by 'podman' backend. Updating accordingly..."
         CONTAINER_BACKEND="$(command -v podman)"
     fi
 
@@ -113,20 +120,28 @@ then
 
     if [[ -z $DOCKER_REGISTRY ]]
     then
-        docker build --force-rm -t "${DOCKER_REGISTRY}proxmox-make-action:main" "$SCRIPT_DIR/docker"
+        echo "Building container image locally..."
+        docker build --force-rm -t "${DOCKER_REGISTRY}proxmox-make-action:main" "$SCRIPT_DIR/docker" | verbose
     else
-        docker pull "${DOCKER_REGISTRY}proxmox-make-action:main"
+        if ! $OFFLINE_BUILD
+        then
+            echo "Pulling container image..."
+            docker pull "${DOCKER_REGISTRY}proxmox-make-action:main" 2>&1 | verbose
+        fi
     fi
 
-    if [[ $DOCKER_IMAGE != "$(docker image ls "-qf=reference=${DOCKER_REGISTRY}proxmox-make-action:main")" ]]
+    if [[ $DOCKER_IMAGE != "$(docker image ls "-qf=reference=${DOCKER_REGISTRY}proxmox-make-action:main")" ]] && \
+       ! docker image rm "${DOCKER_REGISTRY}proxmox-make-action:builder" &>/dev/null
     then
-        docker image rm "${DOCKER_REGISTRY}proxmox-make-action:builder" &>/dev/null || true
+        echo "Unable to delete mismatching builder image." >&2
+        exit 1
     fi
 
     DOCKER_BUILDER="$(docker image ls "-qf=reference=${DOCKER_REGISTRY}proxmox-make-action:builder")"
     if [[ -z $DOCKER_BUILDER ]]
     then
-        docker tag "${DOCKER_REGISTRY}proxmox-make-action:main" "${DOCKER_REGISTRY}proxmox-make-action:builder"
+        echo "No builder image is found. Creating from the base image..."
+        docker tag "${DOCKER_REGISTRY}proxmox-make-action:main" "${DOCKER_REGISTRY}proxmox-make-action:builder" | verbose
     fi
 
     DOCKER_OPTIONS=( "--name" "proxmox-make-action" )
@@ -144,7 +159,18 @@ then
     then
         DOCKER_OPTIONS+=( "--user" "root" )
     fi
-    docker container rm proxmox-make-action &>/dev/null || true
+    if docker ps --filter name=proxmox-make-action
+    then
+        docker stop proxmox-make-action
+        echo ===========================================
+    fi
+    if ! docker container rm proxmox-make-action &>/dev/null | verbose
+    then
+        echo "Unable to delete existing build container." >&2
+        exit 1
+    fi
+
+    echo "Starting builder container..."
     case "$(basename "$CONTAINER_BACKEND")" in
         docker)
             docker run "${DOCKER_OPTIONS[@]}" "${DOCKER_REGISTRY}proxmox-make-action:builder" bash -c "sed -i -E \"s/^(runner):(x?):([0-9]+):([0-9]+):(.*):(.*):(.*)$/\1:\2:$(id -u):$(id -g):\5:\6:\7/\" /etc/passwd && sudo -u runner \"$0\" --native-build ${ARGV[*]}"
@@ -156,50 +182,66 @@ then
             echo "Unsupported container backend '$CONTAINER_BACKEND'." >&2
             exit 1
     esac
-    docker commit proxmox-make-action "${DOCKER_REGISTRY}proxmox-make-action:builder"
-    docker container rm proxmox-make-action
+
+    echo "Saving current container as builder image..."
+    docker commit proxmox-make-action "${DOCKER_REGISTRY}proxmox-make-action:builder" | verbose
+
+    echo "Deleting builder container..."
+    docker container rm proxmox-make-action | verbose
+
     exit
 fi
 
 if $INPLACE_BUILD
 then
-    pushd "$WORK_DIR/.src"
+    echo "Building in place..."
+    pushd "$WORK_DIR/.src" &>/dev/null
 else
-    pushd "$WORK_DIR"
+    pushd "$WORK_DIR" &>/dev/null
 
     if ! git remote | grep -q "upstream"
     then
-        git remote add upstream "git://git.proxmox.com/git/$(basename "$(git remote get-url origin)")"
+        echo "Adding upstream remote..."
+        git remote add upstream "git://git.proxmox.com/git/$(basename "$(git remote get-url origin)")" | verbose
     fi
+        
+    echo "Fetching upstream remote..."
+    git fetch upstream | verbose
 
-    git fetch upstream
-
-    git switch -C upstream upstream/master
-    git push -u origin
-    git switch main
+    git switch -C upstream upstream/master 2>&1 | verbose
+    if [[ -z "$container" ]]
+    then
+        echo "Pushing upstream master branch to origin..."
+        git push -u origin | verbose
+    fi
+    git switch main 2>&1 | verbose
 
     if [[ ! -d "$WORK_DIR/.src" ]]
     then
-        git submodule add -f -b upstream "$(git remote get-url origin)" .src
+        echo "Add .src submodule..."
+        git submodule add -f -b upstream "$(git remote get-url origin)" .src | verbose
         PACKAGE_COMMIT=""
     else
         PACKAGE_COMMIT="$(git submodule status .src | awk '{print $1}')"
     fi
 
-    popd
-    pushd "$WORK_DIR/.src"
+    popd &>/dev/null
+    pushd "$WORK_DIR/.src" &>/dev/null
 
     if [[ -n $(git status -s) ]]
     then
-        git reset --hard origin/upstream
-        git clean -ffd
+        echo "Resetting previous changes..."
+        git reset --hard origin/upstream | verbose
+        git clean -ffd | verbose
     fi
-    git fetch
-    git checkout origin/upstream
+    git fetch | verbose
+    echo "Getting the latest release commit..."
+    git checkout origin/upstream 2>&1 | verbose
     LAST_RELEASE="$(git log --pretty=oneline -n 1 --grep 'bump version to')"
     if [[ -n "$PACKAGE_COMMIT" ]]
     then
-        git checkout "$PACKAGE_COMMIT"
+        echo "Resetting .src to previous release..."
+        git checkout "$PACKAGE_COMMIT" 2>&1 | verbose
     fi
 
     if ! grep -Eq "^[0-9a-f]{40} bump version to .+$" <<< "$LAST_RELEASE"
@@ -219,40 +261,54 @@ else
         fi
     fi
     
-    git checkout "$COMMIT"
+    echo "Preparing building new release '$VERSION'..."
+    git checkout "$COMMIT" 2>&1 | verbose
     patches=("$WORK_DIR"/*.patch)
     if (( ${#patches[@]} != 0))
     then
         if [[ -z $(git config user.name) ]]
         then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git config user.name "github-actions[bot]" | verbose
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com" | verbose
         fi
-        git am --reject --whitespace=fix "${patches[@]}"
+        echo "Applying patches..."
+        git am --reject --whitespace=fix "${patches[@]}" 2>&1 | verbose
     fi
 fi
 
-sudo apt-get update
-sudo apt-get full-upgrade --no-install-recommends -y
-if [[ -f "./debian/control.in" ]]
+if ! $OFFLINE_BUILD
 then
-    make all deb &>/dev/null || true
-    sudo apt-get build-dep --no-install-recommends -y ./build
-    make distclean
-else
-    sudo apt-get build-dep --no-install-recommends -y .
+    echo "Upgrading builder container..."
+    sudo apt-get update | verbose
+    sudo apt-get full-upgrade --no-install-recommends -y | verbose
+    echo "Installing build dependencies..."
+    if [[ -f "./debian/control.in" ]]
+    then
+        make all deb &>/dev/null || true
+        sudo apt-get build-dep --no-install-recommends -y ./build | verbose
+        make distclean | verbose
+    else
+        sudo apt-get build-dep --no-install-recommends -y . | verbose
+    fi
+    sudo rm -rf /var/lib/apt/lists/* | verbose
 fi
-sudo rm -rf /var/lib/apt/lists/*
+
+echo "Building start!
+====================="
 make all deb
 
-popd
+popd &>/dev/null
 
-rm -rf "$WORK_DIR/.output"
-mkdir -p "$WORK_DIR/.output"
-cp "$WORK_DIR"/.src/*.deb "$WORK_DIR/.output"
+echo "Copying build artifacts..."
+rm -rf "$WORK_DIR/.output" | verbose
+mkdir -p "$WORK_DIR/.output" | verbose
+cp "$WORK_DIR"/.src/*.deb "$WORK_DIR/.output" | verbose
 
-pushd "$WORK_DIR/.src"
+pushd "$WORK_DIR/.src" &>/dev/null
 
-git checkout "$COMMIT"
+echo "Resetting repository..."
+git checkout "$COMMIT" 2>&1 | verbose
 
-popd
+popd &>/dev/null
+
+echo "Build complete."
