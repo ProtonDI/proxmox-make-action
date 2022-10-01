@@ -26,18 +26,20 @@ Usage:
         If <source dir> is not supplied, the current folder will be used.
 
 Options:
-        -h                  Show this help.
-        -u|--update-config  Update config file with the latest release version.
-        -n|--native-build   Build without docker.
-        -l|--local-docker   Build local docker image first.
-        -i|--inplace        Build without touching .src folder.
-        -f|--force          Force rebuild the latest version.
-        -v|--verbose        Increase output level.
+        -h                      Show this help.
+        -u|--update-config      Update config file with the latest release version.
+        -n|--native-build       Build without docker.
+        -l|--local-docker       Build local docker image first.
+        -i|--inplace            Build without touching .src folder.
+        -f|--force              Force rebuild the latest version.
+        -v|--verbose            Increase output level.
+        -b|--backend <backend>  Manually specify container backend. supported values are:
+                                docker, podman
 EOF
 }
 
 ARGV=("$@")
-if ! TEMP="$(getopt -o "hunilfv" -l "help,update-config,native-build,inplace,local-docker,force,verbose" -n "$0" -- "$@")"
+if ! TEMP="$(getopt -o "hunilfvb:" -l "help,update-config,native-build,inplace,local-docker,force,verbose,backend:" -n "$0" -- "$@")"
 then
     show_help
     exit
@@ -50,6 +52,7 @@ env_init() {
     INPLACE_BUILD="false"
     DOCKER_REGISTRY="ghcr.io/protondi/"
     FORCE_BUILD="false"
+    CONTAINER_BACKEND="docker"
     VERBOSE="false"
 }
 
@@ -82,6 +85,10 @@ do
         -v|--verbose)
             VERBOSE="true"
             ;;
+        -b|--backend)
+            CONTAINER_BACKEND="$1"
+            shift
+            ;;
         --)
             break
             ;;
@@ -97,6 +104,11 @@ WORK_DIR="$(realpath "${1:-$PWD}")"
 
 if ! $NATIVE_BUILD
 then
+    if [[ "$(basename "$CONTAINER_BACKEND")" == "docker" ]] && "$CONTAINER_BACKEND" -v | grep -q podman
+    then
+        CONTAINER_BACKEND="$(command -v podman)"
+    fi
+
     DOCKER_IMAGE="$(docker image ls "-qf=reference=${DOCKER_REGISTRY}proxmox-make-action:main")"
 
     if [[ -z $DOCKER_REGISTRY ]]
@@ -128,8 +140,22 @@ then
     then
         DOCKER_OPTIONS+=( "--mount" "type=bind,source=$WORK_DIR,destination=$WORK_DIR" )
     fi
+    if [[ "$(basename "$CONTAINER_BACKEND")" == "podman" ]]
+    then
+        DOCKER_OPTIONS+=( "--user" "root" )
+    fi
     docker container rm proxmox-make-action &>/dev/null || true
-    docker run "${DOCKER_OPTIONS[@]}" "${DOCKER_REGISTRY}proxmox-make-action:builder" bash -c "sed -i -E \"s/^(runner):(x?):([0-9]+):([0-9]+):(.*):(.*):(.*)$/\1:\2:$(id -u):$(id -g):\5:\6:\7/\" /etc/passwd && sudo -u runner \"$0\" --native-build ${ARGV[*]}"
+    case "$(basename "$CONTAINER_BACKEND")" in
+        docker)
+            docker run "${DOCKER_OPTIONS[@]}" "${DOCKER_REGISTRY}proxmox-make-action:builder" bash -c "sed -i -E \"s/^(runner):(x?):([0-9]+):([0-9]+):(.*):(.*):(.*)$/\1:\2:$(id -u):$(id -g):\5:\6:\7/\" /etc/passwd && sudo -u runner \"$0\" --native-build ${ARGV[*]}"
+            ;;
+        podman)
+            docker run "${DOCKER_OPTIONS[@]}" "${DOCKER_REGISTRY}proxmox-make-action:builder" bash -c "\"$0\" --native-build ${ARGV[*]}"
+            ;;
+        *)
+            echo "Unsupported container backend '$CONTAINER_BACKEND'." >&2
+            exit 1
+    esac
     docker commit proxmox-make-action "${DOCKER_REGISTRY}proxmox-make-action:builder"
     docker container rm proxmox-make-action
     exit
