@@ -28,7 +28,6 @@ Usage:
 Options:
         -h                      Show this help.
         -d|--distclean          Distclean before make.
-        -u|--update-config      Update config file with the latest release version.
         -n|--native-build       Build without docker.
         -l|--local-docker       Build local docker image first.
         -i|--inplace            Build without touching .src folder.
@@ -41,7 +40,7 @@ EOF
 }
 
 ARGV=("$@")
-if ! TEMP="$(getopt -o "hdunilfvb:o" -l "help,distclean,update-config,native-build,inplace,local-docker,force,verbose,backend:,offline" -n "$0" -- "$@")"
+if ! TEMP="$(getopt -o "hdnilfvb:o" -l "help,distclean,native-build,inplace,local-docker,force,verbose,backend:,offline" -n "$0" -- "$@")"
 then
     show_help
     exit
@@ -49,7 +48,6 @@ fi
 eval set -- "$TEMP"
 
 env_init() {
-    UPDATE_CONFIG="false"
     EXTRA_MAKE_TARGET=""
     NATIVE_BUILD="false"
     INPLACE_BUILD="false"
@@ -70,9 +68,6 @@ do
         -h|--help)
             show_help
             exit
-            ;;
-        -u|--update-config)
-            UPDATE_CONFIG="true"
             ;;
         -d|--distclean)
             EXTRA_MAKE_TARGET="distclean"

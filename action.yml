@@ -14,4 +14,4 @@ runs:
     - name: Build
       shell: bash
       run: |
-        .ci/proxmox-make --update-config ${{ inputs.config-file }}
+        .ci/proxmox-make ${{ inputs.config-file }}
