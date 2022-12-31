@@ -236,12 +236,12 @@ else
     fi
     git fetch | verbose
     echo "Getting the latest release commit..."
-    git checkout origin/upstream 2>&1 | verbose
+    git switch --detach origin/upstream 2>&1 | verbose
     LAST_RELEASE="$(git log --pretty=oneline -n 1 --grep 'bump version to')"
     if [[ -n "$PACKAGE_COMMIT" ]]
     then
         echo "Resetting .src to previous release..."
-        git checkout "$PACKAGE_COMMIT" 2>&1 | verbose
+        git switch --detach "$PACKAGE_COMMIT" 2>&1 | verbose
     fi
 
     if ! grep -Eq "^[0-9a-f]{40} bump version to .+$" <<< "$LAST_RELEASE"
@@ -264,7 +264,7 @@ else
     fi
     
     echo "Preparing building new release '$VERSION'..."
-    git checkout "$COMMIT" 2>&1 | verbose
+    git switch --detach "$COMMIT" 2>&1 | verbose
     patches=("$WORK_DIR"/*.patch)
     if (( ${#patches[@]} != 0))
     then
@@ -295,7 +295,7 @@ then
     sudo rm -rf /var/lib/apt/lists/* | verbose
 fi
 
-echo "Building start!
+echo "Build start!
 ====================="
 sudo rm -rf /var/lib/apt/lists/*
 make ${EXTRA_MAKE_TARGET:-"$EXTRA_MAKE_TARGET"} all deb
@@ -310,7 +310,7 @@ cp "$WORK_DIR"/.src/*.deb "$WORK_DIR/.output" | verbose
 pushd "$WORK_DIR/.src" &>/dev/null
 
 echo "Resetting repository..."
-git checkout "$COMMIT" 2>&1 | verbose
+git switch --detach "$COMMIT" 2>&1 | verbose
 
 popd &>/dev/null
 
