@@ -212,11 +212,8 @@ else
     git fetch upstream | verbose
 
     git switch -C upstream upstream/master 2>&1 | verbose
-    if [[ -z "$container" ]]
-    then
-        echo "Pushing upstream master branch to origin..."
-        git push -u origin | verbose
-    fi
+    echo "Pushing upstream master branch to origin..."
+    git push -u origin | verbose
     git switch main 2>&1 | verbose
 
     if [[ ! -d "$WORK_DIR/.src" ]]
