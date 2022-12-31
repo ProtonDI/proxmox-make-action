@@ -298,7 +298,7 @@ fi
 echo "Build start!
 ====================="
 sudo rm -rf /var/lib/apt/lists/*
-make ${EXTRA_MAKE_TARGET:-"$EXTRA_MAKE_TARGET"} all deb
+make $EXTRA_MAKE_TARGET all deb
 
 popd &>/dev/null
 
