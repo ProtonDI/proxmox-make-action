@@ -209,7 +209,7 @@ else
     if ! git remote | grep -q "upstream"
     then
         echo "Adding upstream remote..."
-        git remote add upstream "git://git.proxmox.com/git/$(basename "$(git remote get-url origin)")" | verbose
+        git remote add upstream "https://git.proxmox.com/git/$(basename "$(git remote get-url origin)")" | verbose
     fi
 
     echo "Fetching upstream remote..."
