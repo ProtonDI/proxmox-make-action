@@ -167,7 +167,7 @@ then
     fi
 
     if $CONTAINER_BACKEND ps -a --filter name=proxmox-make-action | grep proxmox-make-action &>/dev/null && \
-       ! $CONTAINER_BACKEND container rm proxmox-make-action &>/dev/null | verbose
+       ! $CONTAINER_BACKEND container rm proxmox-make-action | verbose
     then
         echo "Unable to delete existing build container." >&2
         exit 1
@@ -250,7 +250,9 @@ else
         exit 1
     fi
 
-    read -r COMMIT i1 i2 i3 VERSION <<< "$LAST_RELEASE"
+    read -r -a COMMIT_INFO <<< "$LAST_RELEASE"
+    COMMIT="${COMMIT_INFO[0]}"
+    VERSION="${COMMIT_INFO[4]}"
     
     if [[ "$PACKAGE_COMMIT" == "$COMMIT" ]]
     then
