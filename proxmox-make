@@ -238,6 +238,7 @@ else
         git reset --hard origin/upstream | verbose
         git clean -ffd | verbose
     fi
+    git am --quit 2>&1 | verbose || true
     git fetch | verbose
     echo "Getting the latest release commit..."
     git switch --detach origin/upstream 2>&1 | verbose
