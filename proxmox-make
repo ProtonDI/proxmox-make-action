@@ -22,7 +22,7 @@ Usage:
         $(basename "$0") [-o|--options] <source dir>
 
         Build proxmox package.
-        
+
         If <source dir> is not supplied, the current folder will be used.
 
 Options:
@@ -211,7 +211,7 @@ else
         echo "Adding upstream remote..."
         git remote add upstream "git://git.proxmox.com/git/$(basename "$(git remote get-url origin)")" | verbose
     fi
-        
+
     echo "Fetching upstream remote..."
     git fetch upstream | verbose
 
@@ -257,7 +257,7 @@ else
     read -r -a COMMIT_INFO <<< "$LAST_RELEASE"
     COMMIT="${COMMIT_INFO[0]}"
     VERSION="${COMMIT_INFO[4]}"
-    
+
     if [[ "$PACKAGE_COMMIT" == "$COMMIT" ]]
     then
         echo "Current release is already the latest." >&2
@@ -266,7 +266,7 @@ else
             exit
         fi
     fi
-    
+
     echo "Preparing building new release '$VERSION'..."
     git switch --detach "$COMMIT" 2>&1 | verbose
     patches=("$WORK_DIR"/*.patch)
