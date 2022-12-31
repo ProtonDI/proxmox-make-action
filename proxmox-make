@@ -229,8 +229,7 @@ else
         PACKAGE_COMMIT="$(git submodule status .src | awk '{print $1}')"
         case "${PACKAGE_COMMIT::1}" in
             -)
-                git submodule init
-                git submodule update --recursive
+                git submodule update --init --recursive
                 PACKAGE_COMMIT="$(git submodule status .src | awk '{print $1}')"
                 ;;
             +)
