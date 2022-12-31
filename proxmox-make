@@ -148,6 +148,10 @@ then
     DOCKER_OPTIONS=( "--name" "proxmox-make-action" )
     DOCKER_OPTIONS+=( "--workdir" "$PWD" )
     DOCKER_OPTIONS+=( "--mount" "type=bind,source=$PWD,destination=$PWD" )
+    if [[ -t 0 ]]
+    then
+        DOCKER_OPTIONS+=( "-it" )
+    fi
     if [[ "$PWD" != "$SCRIPT_DIR" ]]
     then
         DOCKER_OPTIONS+=( "--mount" "type=bind,source=$SCRIPT_DIR,destination=$SCRIPT_DIR" )
