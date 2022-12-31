@@ -131,6 +131,7 @@ then
     fi
 
     if [[ $DOCKER_IMAGE != "$(docker image ls "-qf=reference=${DOCKER_REGISTRY}proxmox-make-action:main")" ]] && \
+       [[ -n "$(docker image ls "-qf=reference=${DOCKER_REGISTRY}proxmox-make-action:builder")" ]] && \
        ! docker image rm "${DOCKER_REGISTRY}proxmox-make-action:builder" &>/dev/null
     then
         echo "Unable to delete mismatching builder image." >&2
