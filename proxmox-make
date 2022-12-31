@@ -229,7 +229,7 @@ else
         PACKAGE_COMMIT="$(git submodule status .src | awk '{print $1}')"
         case "${PACKAGE_COMMIT::1}" in
             -)
-                git submodule update --init --recursive
+                git submodule update --init --recursive 2>&1 | verbose
                 PACKAGE_COMMIT="$(git submodule status .src | awk '{print $1}')"
                 ;;
             +)
@@ -257,6 +257,7 @@ else
     then
         echo "Resetting .src to previous release..."
         git switch --detach "$PACKAGE_COMMIT" 2>&1 | verbose
+        git submodule update --init --recursive 2>&1 | verbose
     fi
 
     if ! grep -Eq "^[0-9a-f]{40} bump version to .+$" <<< "$LAST_RELEASE"
@@ -280,6 +281,7 @@ else
 
     echo "Preparing building new release '$VERSION'..."
     git switch --detach "$COMMIT" 2>&1 | verbose
+    git submodule update --init --recursive 2>&1 | verbose
     patches=("$WORK_DIR"/*.patch)
     if (( ${#patches[@]} != 0))
     then
