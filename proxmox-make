@@ -116,33 +116,33 @@ then
         CONTAINER_BACKEND="$(command -v podman)"
     fi
 
-    DOCKER_IMAGE="$(docker image ls "-qf=reference=${DOCKER_REGISTRY}proxmox-make-action:main")"
+    DOCKER_IMAGE="$($CONTAINER_BACKEND image ls "-qf=reference=${DOCKER_REGISTRY}proxmox-make-action:main")"
 
     if [[ -z $DOCKER_REGISTRY ]]
     then
         echo "Building container image locally..."
-        docker build --force-rm -t "${DOCKER_REGISTRY}proxmox-make-action:main" "$SCRIPT_DIR/docker" | verbose
+        $CONTAINER_BACKEND build --force-rm -t "${DOCKER_REGISTRY}proxmox-make-action:main" "$SCRIPT_DIR/docker" | verbose
     else
         if ! $OFFLINE_BUILD
         then
             echo "Pulling container image..."
-            docker pull "${DOCKER_REGISTRY}proxmox-make-action:main" 2>&1 | verbose
+            $CONTAINER_BACKEND pull "${DOCKER_REGISTRY}proxmox-make-action:main" 2>&1 | verbose
         fi
     fi
 
-    if [[ $DOCKER_IMAGE != "$(docker image ls "-qf=reference=${DOCKER_REGISTRY}proxmox-make-action:main")" ]] && \
-       [[ -n "$(docker image ls "-qf=reference=${DOCKER_REGISTRY}proxmox-make-action:builder")" ]] && \
-       ! docker image rm "${DOCKER_REGISTRY}proxmox-make-action:builder" &>/dev/null
+    if [[ $DOCKER_IMAGE != "$($CONTAINER_BACKEND image ls "-qf=reference=${DOCKER_REGISTRY}proxmox-make-action:main")" ]] && \
+       [[ -n "$($CONTAINER_BACKEND image ls "-qf=reference=${DOCKER_REGISTRY}proxmox-make-action:builder")" ]] && \
+       ! $CONTAINER_BACKEND image rm "${DOCKER_REGISTRY}proxmox-make-action:builder" &>/dev/null
     then
         echo "Unable to delete mismatching builder image." >&2
         exit 1
     fi
 
-    DOCKER_BUILDER="$(docker image ls "-qf=reference=${DOCKER_REGISTRY}proxmox-make-action:builder")"
+    DOCKER_BUILDER="$($CONTAINER_BACKEND image ls "-qf=reference=${DOCKER_REGISTRY}proxmox-make-action:builder")"
     if [[ -z $DOCKER_BUILDER ]]
     then
         echo "No builder image is found. Creating from the base image..."
-        docker tag "${DOCKER_REGISTRY}proxmox-make-action:main" "${DOCKER_REGISTRY}proxmox-make-action:builder" | verbose
+        $CONTAINER_BACKEND tag "${DOCKER_REGISTRY}proxmox-make-action:main" "${DOCKER_REGISTRY}proxmox-make-action:builder" | verbose
     fi
 
     DOCKER_OPTIONS=( "--name" "proxmox-make-action" )
@@ -160,12 +160,12 @@ then
     then
         DOCKER_OPTIONS+=( "--user" "root" )
     fi
-    if docker ps --filter name=proxmox-make-action
+    if $CONTAINER_BACKEND ps --filter name=proxmox-make-action
     then
-        docker stop proxmox-make-action
+        $CONTAINER_BACKEND stop proxmox-make-action
         echo ===========================================
     fi
-    if ! docker container rm proxmox-make-action &>/dev/null | verbose
+    if ! $CONTAINER_BACKEND container rm proxmox-make-action &>/dev/null | verbose
     then
         echo "Unable to delete existing build container." >&2
         exit 1
@@ -174,10 +174,10 @@ then
     echo "Starting builder container..."
     case "$(basename "$CONTAINER_BACKEND")" in
         docker)
-            docker run "${DOCKER_OPTIONS[@]}" "${DOCKER_REGISTRY}proxmox-make-action:builder" bash -c "sed -i -E \"s/^(runner):(x?):([0-9]+):([0-9]+):(.*):(.*):(.*)$/\1:\2:$(id -u):$(id -g):\5:\6:\7/\" /etc/passwd && sudo -u runner \"$0\" --native-build ${ARGV[*]}"
+            $CONTAINER_BACKEND run "${DOCKER_OPTIONS[@]}" "${DOCKER_REGISTRY}proxmox-make-action:builder" bash -c "sed -i -E \"s/^(runner):(x?):([0-9]+):([0-9]+):(.*):(.*):(.*)$/\1:\2:$(id -u):$(id -g):\5:\6:\7/\" /etc/passwd && sudo -u runner \"$0\" --native-build ${ARGV[*]}"
             ;;
         podman)
-            docker run "${DOCKER_OPTIONS[@]}" "${DOCKER_REGISTRY}proxmox-make-action:builder" bash -c "\"$0\" --native-build ${ARGV[*]}"
+            $CONTAINER_BACKEND run "${DOCKER_OPTIONS[@]}" "${DOCKER_REGISTRY}proxmox-make-action:builder" bash -c "\"$0\" --native-build ${ARGV[*]}"
             ;;
         *)
             echo "Unsupported container backend '$CONTAINER_BACKEND'." >&2
@@ -185,10 +185,10 @@ then
     esac
 
     echo "Saving current container as builder image..."
-    docker commit proxmox-make-action "${DOCKER_REGISTRY}proxmox-make-action:builder" | verbose
+    $CONTAINER_BACKEND commit proxmox-make-action "${DOCKER_REGISTRY}proxmox-make-action:builder" | verbose
 
     echo "Deleting builder container..."
-    docker container rm proxmox-make-action | verbose
+    $CONTAINER_BACKEND container rm proxmox-make-action | verbose
 
     exit
 fi
