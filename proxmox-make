@@ -282,15 +282,15 @@ if ! $OFFLINE_BUILD
 then
     echo "Upgrading builder container..."
     sudo apt-get update | verbose
-    sudo apt-get full-upgrade --no-install-recommends -y | verbose
+    sudo apt-get full-upgrade --no-install-recommends -y 2>&1 | verbose
     echo "Installing build dependencies..."
     if [[ -f "./debian/control.in" ]]
     then
         make all deb &>/dev/null || true
-        sudo apt-get build-dep --no-install-recommends -y ./build | verbose
+        sudo apt-get build-dep --no-install-recommends -y ./build 2>&1 | verbose
         make distclean | verbose
     else
-        sudo apt-get build-dep --no-install-recommends -y . | verbose
+        sudo apt-get build-dep --no-install-recommends -y . 2>&1 | verbose
     fi
     sudo rm -rf /var/lib/apt/lists/* | verbose
 fi
