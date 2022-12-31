@@ -160,15 +160,15 @@ then
     then
         DOCKER_OPTIONS+=( "--user" "root" )
     fi
-    if $CONTAINER_BACKEND ps --filter name=proxmox-make-action
+    if $CONTAINER_BACKEND ps --filter name=proxmox-make-action | grep proxmox-make-action
     then
         $CONTAINER_BACKEND stop proxmox-make-action
         echo ===========================================
-    fi
-    if ! $CONTAINER_BACKEND container rm proxmox-make-action &>/dev/null | verbose
-    then
-        echo "Unable to delete existing build container." >&2
-        exit 1
+        if ! $CONTAINER_BACKEND container rm proxmox-make-action &>/dev/null | verbose
+        then
+            echo "Unable to delete existing build container." >&2
+            exit 1
+        fi
     fi
 
     echo "Starting builder container..."
