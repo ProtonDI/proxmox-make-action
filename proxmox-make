@@ -30,6 +30,7 @@ Options:
         -d|--distclean          Distclean before make.
         -n|--native-build       Build without docker.
         -l|--local-docker       Build local docker image first.
+        -s|--shell              Start a shell inside of the container.
         -i|--inplace            Build without touching .src folder.
         -f|--force              Force rebuild the latest version.
         -v|--verbose            Increase output level.
@@ -40,7 +41,7 @@ EOF
 }
 
 ARGV=("$@")
-if ! TEMP="$(getopt -o "hdnilfvb:o" -l "help,distclean,native-build,inplace,local-docker,force,verbose,backend:,offline" -n "$0" -- "$@")"
+if ! TEMP="$(getopt -o "hdnilsfvb:o" -l "help,distclean,native-build,inplace,local-docker,shell,force,verbose,backend:,offline" -n "$0" -- "$@")"
 then
     show_help
     exit
@@ -56,6 +57,7 @@ env_init() {
     CONTAINER_BACKEND="docker"
     VERBOSE="false"
     OFFLINE_BUILD="false"
+    CONTAINER_SHELL="false"
 }
 
 env_init
@@ -86,6 +88,9 @@ do
             ;;
         -v|--verbose)
             VERBOSE="true"
+            ;;
+        -s|--shell)
+            CONTAINER_SHELL="true"
             ;;
         -b|--backend)
             CONTAINER_BACKEND="$1"
@@ -180,10 +185,22 @@ then
     echo "Starting builder container..."
     case "$(basename "$CONTAINER_BACKEND")" in
         docker)
-            $CONTAINER_BACKEND run "${DOCKER_OPTIONS[@]}" "${DOCKER_REGISTRY}proxmox-make-action:builder" bash -c "sed -i -E \"s/^(runner):(x?):([0-9]+):([0-9]+):(.*):(.*):(.*)$/\1:\2:$(id -u):$(id -g):\5:\6:\7/\" /etc/passwd && sudo -u runner \"$0\" --native-build ${ARGV[*]}"
+            if $CONTAINER_SHELL
+            then
+                $CONTAINER_BACKEND run "${DOCKER_OPTIONS[@]}" "${DOCKER_REGISTRY}proxmox-make-action:builder" bash -c "sed -i -E \"s/^(runner):(x?):([0-9]+):([0-9]+):(.*):(.*):(.*)$/\1:\2:$(id -u):$(id -g):\5:\6:\7/\" /etc/passwd && sudo -u runner bash"
+                exit
+            else
+                $CONTAINER_BACKEND run "${DOCKER_OPTIONS[@]}" "${DOCKER_REGISTRY}proxmox-make-action:builder" bash -c "sed -i -E \"s/^(runner):(x?):([0-9]+):([0-9]+):(.*):(.*):(.*)$/\1:\2:$(id -u):$(id -g):\5:\6:\7/\" /etc/passwd && sudo -u runner \"$0\" --native-build ${ARGV[*]}"
+            fi
             ;;
         podman)
-            $CONTAINER_BACKEND run "${DOCKER_OPTIONS[@]}" "${DOCKER_REGISTRY}proxmox-make-action:builder" bash -c "\"$0\" --native-build ${ARGV[*]}"
+            if $CONTAINER_SHELL
+            then
+                $CONTAINER_BACKEND run "${DOCKER_OPTIONS[@]}" "${DOCKER_REGISTRY}proxmox-make-action:builder" bash
+                exit
+            else
+                $CONTAINER_BACKEND run "${DOCKER_OPTIONS[@]}" "${DOCKER_REGISTRY}proxmox-make-action:builder" bash -c "\"$0\" --native-build ${ARGV[*]}"
+            fi
             ;;
         *)
             echo "Unsupported container backend '$CONTAINER_BACKEND'." >&2
