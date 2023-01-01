@@ -1,7 +1,7 @@
 name: proxmox-make
 description: Create multi-arch Proxmox packages
 inputs:
-  config-file:
+  project-dir:
     required: false
 runs:
   using: composite
@@ -14,4 +14,4 @@ runs:
     - name: Build
       shell: bash
       run: |
-        .ci/proxmox-make ${{ inputs.config-file }}
+        .ci/proxmox-make ${{ inputs.project-dir }}
