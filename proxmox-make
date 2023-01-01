@@ -169,6 +169,11 @@ then
     then
         CONTAINER_OPTIONS+=( "--user" "root" )
     fi
+    if $CONTAINER_SHELL
+    then
+        CONTAINER_OPTIONS+=( "--rm" )
+    fi
+
     if $CONTAINER_BACKEND ps --filter name=proxmox-make-action | grep proxmox-make-action &>/dev/null
     then
         $CONTAINER_BACKEND stop proxmox-make-action
