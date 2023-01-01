@@ -8,6 +8,7 @@ RUN dpkg --add-architecture arm64 && \
     apt-get install --no-install-recommends -y \
         apt-transport-https ca-certificates wget debian-ports-archive-keyring \
         apt-utils git rsync fakeroot sudo \
+        devscripts lintian \
         build-essential crossbuild-essential-arm64 gcc-riscv64-linux-gnu g++-riscv64-linux-gnu && \
     echo "deb [arch=riscv64] http://deb.debian.org/debian-ports unstable main" > /etc/apt/sources.list.d/debian-ports-unstable-repo.list && \
     echo "deb [arch=riscv64] http://deb.debian.org/debian-ports unreleased main" > /etc/apt/sources.list.d/debian-ports-unreleased-repo.list && \
