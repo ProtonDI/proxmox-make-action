@@ -136,11 +136,14 @@ then
     fi
 
     if [[ $CONTAINER_IMAGE != "$($CONTAINER_BACKEND image ls "-qf=reference=${CONTAINER_REGISTRY}proxmox-make-action:main")" ]] && \
-       [[ -n "$($CONTAINER_BACKEND image ls "-qf=reference=${CONTAINER_REGISTRY}proxmox-make-action:builder")" ]] && \
-       ! $CONTAINER_BACKEND image rm -f "${CONTAINER_REGISTRY}proxmox-make-action:builder" &>/dev/null
+       [[ -n "$($CONTAINER_BACKEND image ls "-qf=reference=${CONTAINER_REGISTRY}proxmox-make-action:builder")" ]]
     then
-        echo "Unable to delete mismatching builder image." >&2
-        exit 1
+        echo "Base image updated. Removing existing builder image..."
+        if  ! $CONTAINER_BACKEND image rm -f "${CONTAINER_REGISTRY}proxmox-make-action:builder" &>/dev/null
+        then
+            echo "Unable to delete mismatching builder image." >&2
+            exit 1
+        fi
     fi
 
     CONTAINER_BUILDER="$($CONTAINER_BACKEND image ls "-qf=reference=${CONTAINER_REGISTRY}proxmox-make-action:builder")"
