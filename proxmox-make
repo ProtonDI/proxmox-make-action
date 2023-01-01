@@ -126,7 +126,7 @@ then
     if [[ -z $CONTAINER_REGISTRY ]]
     then
         echo "Building container image locally..."
-        $CONTAINER_BACKEND build --force-rm -t "${CONTAINER_REGISTRY}proxmox-make-action:main" "$SCRIPT_DIR/docker" | verbose
+        $CONTAINER_BACKEND build --force-rm -t "${CONTAINER_REGISTRY}proxmox-make-action:main" "$SCRIPT_DIR/container" | verbose
     else
         if ! $OFFLINE_BUILD
         then
